@@ -65,6 +65,44 @@
         <p class="empty" id="empty" hidden>Sin resultados.</p>
     </main>
 
+    <dialog class="preview-dialog" id="preview-dialog" aria-labelledby="preview-title">
+        <div class="preview-panel">
+            <button type="button" class="preview-close" id="preview-close" aria-label="Cerrar vista previa">×</button>
+            <div class="preview-image-wrap">
+                <button type="button" class="preview-nav preview-prev" id="preview-prev" aria-label="Diseño anterior">
+                    <span class="miller-icon" data-icon="arrow_left" aria-hidden="true"></span>
+                </button>
+                <img id="preview-image" alt="">
+                <span class="preview-counter" id="preview-counter"></span>
+                <button type="button" class="preview-nav preview-next" id="preview-next" aria-label="Diseño siguiente">
+                    <span class="miller-icon" data-icon="arrow_right" aria-hidden="true"></span>
+                </button>
+            </div>
+            <section class="preview-details">
+                <span class="preview-type" id="preview-type"></span>
+                <h2 id="preview-title"></h2>
+                <dl class="preview-info">
+                    <div>
+                        <dt>Descarga</dt>
+                        <dd id="preview-package"></dd>
+                    </div>
+                    <div>
+                        <dt>Peso</dt>
+                        <dd id="preview-size"></dd>
+                    </div>
+                    <div>
+                        <dt>Formatos incluidos</dt>
+                        <dd class="preview-formats" id="preview-formats"></dd>
+                    </div>
+                </dl>
+                <a class="btn btn-primary preview-download" id="preview-download" download>
+                    <span class="miller-icon" data-icon="download" aria-hidden="true"></span>
+                    Descargar archivos
+                </a>
+            </section>
+        </div>
+    </dialog>
+
     <footer class="footer">
         <span>Community Publicity</span>
         <span>·</span>

@@ -6,6 +6,8 @@ const designs = [
         preview: "files/pendon_nuevo_2026/pendon_nuevo%202026.png",
         download: "files/pendon_nuevo_2026/pendon_nuevo_2026.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 78954515,
+        includedFormats: ["AI", "PSD", "PNG", "ICC"],
     },
     {
         title: "Sticker SIM Cards",
@@ -14,6 +16,8 @@ const designs = [
         preview: "files/sticker_sim/sticker.png",
         download: "files/sticker_sim/sticker_sim.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 70162,
+        includedFormats: ["AI"],
     },
     {
         title: "Sticker Claro Quindío",
@@ -22,6 +26,8 @@ const designs = [
         preview: "files/sticker_claro_quindio/sticker.png",
         download: "files/sticker_claro_quindio/sticker_claro_quindio.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 91310708,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Sticker Claro Risaralda",
@@ -30,6 +36,8 @@ const designs = [
         preview: "files/sticker_claro_risaralda/sticker.png",
         download: "files/sticker_claro_risaralda/sticker_claro_risaralda.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 39534466,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Sticker Claro Valle",
@@ -38,6 +46,8 @@ const designs = [
         preview: "files/sticker_claro_valle/sticker.png",
         download: "files/sticker_claro_valle/sticker_claro_valle.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 12045057,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Prohibido Parquear",
@@ -46,6 +56,8 @@ const designs = [
         preview: "files/prohibido_parquear/sticker.png",
         download: "files/prohibido_parquear/prohibido_parquear.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 2573546,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Aviso: Mantener puerta cerrada",
@@ -54,6 +66,8 @@ const designs = [
         preview: "files/aviso_ba%C3%B1o/aviso.png",
         download: "files/aviso_ba%C3%B1o/aviso_ba%C3%B1o.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 2198702,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Zona Monitoreada por CCTV",
@@ -62,6 +76,8 @@ const designs = [
         preview: "files/zona_monitoreada/mesa.png",
         download: "files/zona_monitoreada/zona_monitoreada.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 2072908,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Zona de Espera",
@@ -70,6 +86,8 @@ const designs = [
         preview: "files/zona_espera/mesa.png",
         download: "files/zona_espera/zona_espera.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 1984947,
+        includedFormats: ["AI", "TIF"],
     },
     {
         title: "Reglamento Interno DQ",
@@ -78,6 +96,8 @@ const designs = [
         preview: "files/manual_dq/mesa.png",
         download: "files/manual_dq/manual_dq.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 2110589,
+        includedFormats: ["AI"],
     },
     {
         title: "Reglamento Interno MafePhone",
@@ -86,6 +106,8 @@ const designs = [
         preview: "files/manual_mafe/mesa.png",
         download: "files/manual_mafe/manual_mafe.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 2136725,
+        includedFormats: ["AI"],
     },
     {
         title: "Plantilla de precio $9.000",
@@ -94,6 +116,8 @@ const designs = [
         preview: "files/Precio_9000_standar/mesa.png",
         download: "files/Precio_9000_standar/Precio_9000_standar.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 1726812,
+        includedFormats: ["AI"],
     },
     {
         title: "Plantilla mini de precio $9.000",
@@ -102,6 +126,8 @@ const designs = [
         preview: "files/precio_9000_mini/mesa.png",
         download: "files/precio_9000_mini/precio_9000_mini.zip",
         downloadFormat: "ZIP",
+        downloadSizeBytes: 1784382,
+        includedFormats: ["AI"],
     },
 ];
 
@@ -113,10 +139,26 @@ const downloadMenu = document.getElementById("download-menu");
 const downloadMenuToggle = document.getElementById("download-menu-toggle");
 const downloadMenuList = document.getElementById("download-menu-list");
 const shareStatus = document.getElementById("share-status");
+const previewDialog = document.getElementById("preview-dialog");
+const previewImage = document.getElementById("preview-image");
+const previewDetails = previewDialog.querySelector(".preview-details");
+const previewTitle = document.getElementById("preview-title");
+const previewType = document.getElementById("preview-type");
+const previewPackage = document.getElementById("preview-package");
+const previewSize = document.getElementById("preview-size");
+const previewFormats = document.getElementById("preview-formats");
+const previewDownload = document.getElementById("preview-download");
+const previewCounter = document.getElementById("preview-counter");
+const previewPrev = document.getElementById("preview-prev");
+const previewNext = document.getElementById("preview-next");
+const previewClose = document.getElementById("preview-close");
 
 let activeFilter = "all";
 let query = "";
 let shareStatusTimeout;
+let visibleDesigns = [];
+let currentPreviewIndex = -1;
+let previewOpener = null;
 
 function closeDownloadMenu() {
     downloadMenuToggle.setAttribute("aria-expanded", "false");
@@ -140,6 +182,63 @@ function updateFilterIndicator() {
     filterList.style.setProperty("--indicator-width", `${buttonRect.width}px`);
 }
 
+function formatFileSize(bytes) {
+    if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(1)} KB`;
+    return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+function updatePreview(animate = false) {
+    const design = visibleDesigns[currentPreviewIndex];
+    if (!design) return;
+
+    [previewImage, previewDetails].forEach(element => {
+        element.classList.remove("preview-enter");
+    });
+    previewImage.src = design.preview;
+    previewImage.alt = design.title;
+    if (animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        [previewImage, previewDetails].forEach(element => {
+            void element.offsetWidth;
+            element.classList.add("preview-enter");
+        });
+    }
+    previewTitle.textContent = design.title;
+    previewType.textContent = design.type;
+    previewPackage.textContent = design.downloadFormat;
+    previewSize.textContent = formatFileSize(design.downloadSizeBytes);
+    previewFormats.replaceChildren(...design.includedFormats.map(format => {
+        const badge = document.createElement("span");
+        badge.className = "format-badge";
+        badge.textContent = format;
+        return badge;
+    }));
+    previewDownload.href = design.download;
+    previewDownload.setAttribute("aria-label", `Descargar ${design.title} (${design.downloadFormat}, ${formatFileSize(design.downloadSizeBytes)})`);
+    previewCounter.textContent = `${currentPreviewIndex + 1} de ${visibleDesigns.length}`;
+    previewPrev.disabled = visibleDesigns.length < 2;
+    previewNext.disabled = visibleDesigns.length < 2;
+}
+
+function openPreview(index, opener) {
+    currentPreviewIndex = index;
+    previewOpener = opener;
+    updatePreview();
+    previewDialog.showModal();
+    window.MillerIcons?.scan(previewDialog);
+    previewClose.focus();
+}
+
+function closePreview() {
+    if (!previewDialog.open) return;
+    previewDialog.close();
+}
+
+function movePreview(direction) {
+    if (visibleDesigns.length < 2) return;
+    currentPreviewIndex = (currentPreviewIndex + direction + visibleDesigns.length) % visibleDesigns.length;
+    updatePreview(true);
+}
+
 function render() {
     const q = query.trim().toLowerCase();
     const filtered = designs.filter(d => {
@@ -148,6 +247,7 @@ function render() {
         return matchFilter && matchQuery;
     });
 
+    visibleDesigns = filtered;
     gallery.innerHTML = "";
     if (filtered.length === 0) { empty.hidden = false; return; }
     empty.hidden = true;
@@ -157,7 +257,9 @@ function render() {
         card.className = "card";
         card.innerHTML = `
             <div class="card-media">
-                <img src="${d.preview}" alt="${d.title}">
+                <button type="button" class="card-preview" aria-label="Ver detalles de ${d.title}">
+                    <img src="${d.preview}" alt="">
+                </button>
             </div>
             <div class="card-body">
                 <div class="card-meta-row">
@@ -171,6 +273,7 @@ function render() {
         gallery.appendChild(card);
     });
     window.MillerIcons?.scan(gallery);
+    if (previewDialog.open && currentPreviewIndex >= 0) updatePreview();
 }
 
 filterList.addEventListener("click", e => {
@@ -192,12 +295,48 @@ searchInput.addEventListener("keydown", e => { if (e.key === "Enter") { query = 
 searchInput.addEventListener("input", () => { query = searchInput.value; render(); });
 
 gallery.addEventListener("click", e => {
+    const previewButton = e.target.closest(".card-preview");
+    if (previewButton) {
+        const card = previewButton.closest(".card");
+        const cardIndex = [...gallery.querySelectorAll(".card")].indexOf(card);
+        openPreview(cardIndex, previewButton);
+        return;
+    }
+
     const btn = e.target.closest("button[data-file]");
     if (!btn) return;
     const a = document.createElement("a");
     a.href = btn.dataset.file;
     a.download = "";
     a.click();
+});
+
+previewPrev.addEventListener("click", () => movePreview(-1));
+previewNext.addEventListener("click", () => movePreview(1));
+previewClose.addEventListener("click", closePreview);
+previewDownload.addEventListener("click", () => closePreview());
+
+previewDialog.addEventListener("click", e => {
+    if (e.target === previewDialog) closePreview();
+});
+
+previewDialog.addEventListener("close", () => {
+    if (previewOpener?.isConnected) previewOpener.focus();
+    previewOpener = null;
+});
+
+document.addEventListener("keydown", e => {
+    if (!previewDialog.open) return;
+    if (e.key === "Escape") {
+        e.preventDefault();
+        closePreview();
+    } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        movePreview(-1);
+    } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        movePreview(1);
+    }
 });
 
 downloadMenuToggle.addEventListener("click", () => {
