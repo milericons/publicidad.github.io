@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Publicity — Diseños</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="estilo.css">
+    <script src="https://milericons.github.io/outline.github.io/public/miller-icons.js" defer></script>
+    <script src="main.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <div class="brand-mark">CP</div>
+                <div class="brand-text">
+                    <strong>Community Publicity</strong>
+                    <span>Catálogo de diseños</span>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="search">
+                    <input type="text" id="search" placeholder="Buscar diseño...">
+                </div>
+                <div class="action-menu" id="download-menu">
+                    <button type="button" class="btn action-menu-toggle" id="download-menu-toggle"
+                            aria-label="Más opciones" aria-haspopup="true" aria-expanded="false"
+                            aria-controls="download-menu-list">
+                        <span class="miller-icon" data-icon="more_vertical" aria-hidden="true"></span>
+                    </button>
+                    <div class="action-menu-list" id="download-menu-list" role="menu" aria-labelledby="download-menu-toggle" hidden>
+                        <button type="button" class="action-menu-item" id="download-all" role="menuitem">
+                            <span class="miller-icon" data-icon="folder_download" aria-hidden="true"></span>
+                            Descargar todos los diseños
+                        </button>
+                        <button type="button" class="action-menu-item" id="share-page" role="menuitem">
+                            <span class="miller-icon" data-icon="share" aria-hidden="true"></span>
+                            Compartir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="share-status" id="share-status" role="status" aria-live="polite" hidden></div>
+
+    <main class="main">
+        <!-- <section class="intro">
+            <h1>Diseños disponibles</h1>
+            <p>Explora y descarga los diseños de publicidad de la empresa.</p>
+        </section> -->
+
+        <nav class="filters" id="filter-list">
+            <button class="chip active" data-filter="all" aria-pressed="true">Todos</button>
+            <button class="chip" data-filter="pendon" aria-pressed="false">Pendones</button>
+            <button class="chip" data-filter="sticker" aria-pressed="false">Stickers</button>
+            <button class="chip" data-filter="senalizacion" aria-pressed="false">Señalización</button>
+            <button class="chip" data-filter="manual" aria-pressed="false">Manuales</button>
+            <button class="chip" data-filter="plantilla" aria-pressed="false">Plantillas</button>
+        </nav>
+
+        <section class="gallery" id="gallery"></section>
+
+        <p class="empty" id="empty" hidden>Sin resultados.</p>
+    </main>
+
+    <footer class="footer">
+        <span>Community Publicity</span>
+        <span>·</span>
+        <span>Diseños disponibles</span>
+    </footer>
+
+</body>
+</html>
