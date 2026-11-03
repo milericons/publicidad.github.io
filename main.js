@@ -141,6 +141,8 @@ const downloadMenuList = document.getElementById("download-menu-list");
 const shareStatus = document.getElementById("share-status");
 const previewDialog = document.getElementById("preview-dialog");
 const previewImage = document.getElementById("preview-image");
+const previewImageWrap = previewDialog.querySelector(".preview-image-wrap");
+const previewLens = document.getElementById("preview-lens");
 const previewDetails = previewDialog.querySelector(".preview-details");
 const previewTitle = document.getElementById("preview-title");
 const previewType = document.getElementById("preview-type");
@@ -187,10 +189,57 @@ function formatFileSize(bytes) {
     return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
 
+function hidePreviewLens() {
+    previewLens.hidden = true;
+}
+
+function updatePreviewLens(event) {
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches ||
+        event.target.closest(".preview-nav, .preview-counter")) {
+        hidePreviewLens();
+        return;
+    }
+
+    if (!previewImage.complete || !previewImage.naturalWidth) {
+        hidePreviewLens();
+        return;
+    }
+
+    const imageRect = previewImage.getBoundingClientRect();
+    const frameRect = previewImageWrap.getBoundingClientRect();
+    const imageScale = Math.min(
+        imageRect.width / previewImage.naturalWidth,
+        imageRect.height / previewImage.naturalHeight
+    );
+    const imageWidth = previewImage.naturalWidth * imageScale;
+    const imageHeight = previewImage.naturalHeight * imageScale;
+    const imageLeft = imageRect.left + (imageRect.width - imageWidth) / 2;
+    const imageTop = imageRect.top + (imageRect.height - imageHeight) / 2;
+    const imageX = event.clientX - imageLeft;
+    const imageY = event.clientY - imageTop;
+
+    if (imageX < 0 || imageX > imageWidth || imageY < 0 || imageY > imageHeight) {
+        hidePreviewLens();
+        return;
+    }
+
+    const zoom = 2.5;
+    const lensSize = 176;
+    const lensRadius = lensSize / 2;
+    previewLens.style.left = `${event.clientX - frameRect.left - lensRadius}px`;
+    previewLens.style.top = `${event.clientY - frameRect.top - lensRadius}px`;
+    previewLens.style.backgroundImage = `url("${previewImage.currentSrc}")`;
+    previewLens.style.backgroundSize = `${imageWidth * zoom}px ${imageHeight * zoom}px`;
+    previewLens.style.backgroundPosition =
+        `${lensRadius - imageX * zoom}px ${lensRadius - imageY * zoom}px`;
+    previewLens.hidden = false;
+}
+
 function updatePreview(animate = false) {
     const design = visibleDesigns[currentPreviewIndex];
     if (!design) return;
 
+    hidePreviewLens();
     [previewImage, previewDetails].forEach(element => {
         element.classList.remove("preview-enter");
     });
@@ -315,6 +364,8 @@ previewPrev.addEventListener("click", () => movePreview(-1));
 previewNext.addEventListener("click", () => movePreview(1));
 previewClose.addEventListener("click", closePreview);
 previewDownload.addEventListener("click", () => closePreview());
+previewImageWrap.addEventListener("pointermove", updatePreviewLens);
+previewImageWrap.addEventListener("pointerleave", hidePreviewLens);
 
 previewDialog.addEventListener("click", e => {
     if (e.target === previewDialog) closePreview();
