@@ -90,6 +90,56 @@ const designs = [
         includedFormats: ["AI", "TIF"],
     },
     {
+        title: "Área de Bancos",
+        type: "Señalización",
+        tag: "senalizacion",
+        preview: "files/area_bancos/mesa.png",
+        download: "files/area_bancos/area_bancos.zip",
+        downloadFormat: "ZIP",
+        downloadSizeBytes: 1435248,
+        includedFormats: ["AI"],
+    },
+    {
+        title: "Área Tecnológica",
+        type: "Señalización",
+        tag: "senalizacion",
+        preview: "files/area_tecnologica/mesa.png",
+        download: "files/area_tecnologica/area_tecnologica.zip",
+        downloadFormat: "ZIP",
+        downloadSizeBytes: 1436153,
+        includedFormats: ["AI"],
+    },
+    {
+        title: "Cafetería",
+        type: "Señalización",
+        tag: "senalizacion",
+        preview: "files/cafeteria/mesa.png",
+        download: "files/cafeteria/cafeteria.zip",
+        downloadFormat: "ZIP",
+        downloadSizeBytes: 1433434,
+        includedFormats: ["AI"],
+    },
+    {
+        title: "Extintor",
+        type: "Señalización",
+        tag: "senalizacion",
+        preview: "files/extintor/mesa.png",
+        download: "files/extintor/extintor.zip",
+        downloadFormat: "ZIP",
+        downloadSizeBytes: 1432759,
+        includedFormats: ["AI"],
+    },
+    {
+        title: "Publicidad",
+        type: "Señalización",
+        tag: "senalizacion",
+        preview: "files/publicidad/mesa.png",
+        download: "files/publicidad/publicidad.zip",
+        downloadFormat: "ZIP",
+        downloadSizeBytes: 1432935,
+        includedFormats: ["AI"],
+    },
+    {
         title: "Reglamento Interno DQ",
         type: "Manual",
         tag: "manual",
@@ -135,6 +185,8 @@ const gallery = document.getElementById("gallery");
 const empty = document.getElementById("empty");
 const searchInput = document.getElementById("search");
 const filterList = document.getElementById("filter-list");
+const groupedViewToggle = document.getElementById("toggle-grouped-view");
+const backToFoldersButton = document.getElementById("back-to-folders");
 const downloadMenu = document.getElementById("download-menu");
 const downloadMenuToggle = document.getElementById("download-menu-toggle");
 const downloadMenuList = document.getElementById("download-menu-list");
@@ -155,12 +207,41 @@ const previewPrev = document.getElementById("preview-prev");
 const previewNext = document.getElementById("preview-next");
 const previewClose = document.getElementById("preview-close");
 
+const groupedViewStorageKey = "publicityGroupedViewEnabled";
+
+function loadGroupedViewPreference() {
+    try {
+        return window.localStorage.getItem(groupedViewStorageKey) === "true";
+    } catch (error) {
+        console.warn("No se pudo leer la preferencia de vista agrupada.", error);
+        return false;
+    }
+}
+
+function saveGroupedViewPreference() {
+    try {
+        window.localStorage.setItem(groupedViewStorageKey, String(groupedViewEnabled));
+    } catch (error) {
+        console.warn("No se pudo guardar la preferencia de vista agrupada.", error);
+    }
+}
+
 let activeFilter = "all";
 let query = "";
 let shareStatusTimeout;
 let visibleDesigns = [];
 let currentPreviewIndex = -1;
 let previewOpener = null;
+let groupedViewEnabled = loadGroupedViewPreference();
+let openFolderTag = null;
+
+const categoryFolderTitles = {
+    pendon: "Pendones",
+    sticker: "Stickers",
+    senalizacion: "Señalizaciones",
+    manual: "Manuales",
+    plantilla: "Plantillas",
+};
 
 function closeDownloadMenu() {
     downloadMenuToggle.setAttribute("aria-expanded", "false");
@@ -288,6 +369,42 @@ function movePreview(direction) {
     updatePreview(true);
 }
 
+function updateGalleryViewControls() {
+    groupedViewToggle.setAttribute("aria-pressed", String(groupedViewEnabled));
+    groupedViewToggle.textContent = groupedViewEnabled
+        ? "Desactivar vista agrupada"
+        : "Agrupar diseños";
+    backToFoldersButton.hidden = openFolderTag === null;
+}
+
+function createDesignFolderCard(tag, folderDesigns) {
+    const title = categoryFolderTitles[tag] || folderDesigns[0].type;
+    const card = document.createElement("article");
+    card.className = "card design-folder-card";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "design-folder-button";
+    button.dataset.folderTag = tag;
+    button.setAttribute("aria-label", `Abrir carpeta de ${title}, ${folderDesigns.length} diseños`);
+
+    const previews = folderDesigns.slice(0, 4)
+        .map(design => `<img src="${design.preview}" alt="">`)
+        .join("");
+    button.innerHTML = `
+        <span class="design-folder-collage" aria-hidden="true">${previews}</span>
+        <span class="design-folder-count">${folderDesigns.length} diseños</span>`;
+    card.appendChild(button);
+
+    const body = document.createElement("div");
+    body.className = "card-body";
+    body.innerHTML = `
+        <div class="card-meta-row"><span class="card-tag">Carpeta</span></div>
+        <div class="card-title">${title}</div>`;
+    card.appendChild(body);
+    return card;
+}
+
 function render() {
     const q = query.trim().toLowerCase();
     const filtered = designs.filter(d => {
@@ -296,12 +413,40 @@ function render() {
         return matchFilter && matchQuery;
     });
 
-    visibleDesigns = filtered;
-    gallery.innerHTML = "";
-    if (filtered.length === 0) { empty.hidden = false; return; }
-    empty.hidden = true;
+    const folderGroups = new Map();
+    if (groupedViewEnabled && openFolderTag === null) {
+        filtered.forEach(design => {
+            if (!folderGroups.has(design.tag)) folderGroups.set(design.tag, []);
+            folderGroups.get(design.tag).push(design);
+        });
+        for (const [tag, categoryDesigns] of folderGroups) {
+            if (categoryDesigns.length < 2) folderGroups.delete(tag);
+        }
+    }
 
+    visibleDesigns = folderGroups.size
+        ? filtered.filter(design => !folderGroups.has(design.tag))
+        : filtered;
+    gallery.innerHTML = "";
+    const showFolder = folderGroups.size > 0;
+    const hasResults = visibleDesigns.length > 0 || showFolder;
+    empty.textContent = openFolderTag !== null
+        ? `No hay ${categoryFolderTitles[openFolderTag].toLowerCase()} que coincidan con la búsqueda.`
+        : "Sin resultados.";
+    empty.hidden = hasResults;
+    updateGalleryViewControls();
+    if (!hasResults) return;
+
+    const renderedFolders = new Set();
     filtered.forEach(d => {
+        if (folderGroups.has(d.tag)) {
+            if (!renderedFolders.has(d.tag)) {
+                gallery.appendChild(createDesignFolderCard(d.tag, folderGroups.get(d.tag)));
+                renderedFolders.add(d.tag);
+            }
+            return;
+        }
+
         const card = document.createElement("article");
         card.className = "card";
         card.innerHTML = `
@@ -329,6 +474,7 @@ filterList.addEventListener("click", e => {
     const btn = e.target.closest("button[data-filter]");
     if (!btn) return;
     activeFilter = btn.dataset.filter;
+    openFolderTag = null;
     filterList.querySelectorAll("button[data-filter]").forEach(x => {
         const isActive = x === btn;
         x.classList.toggle("active", isActive);
@@ -338,12 +484,57 @@ filterList.addEventListener("click", e => {
     render();
 });
 
+groupedViewToggle.addEventListener("click", () => {
+    groupedViewEnabled = !groupedViewEnabled;
+    saveGroupedViewPreference();
+    openFolderTag = null;
+    activeFilter = "all";
+    filterList.querySelectorAll("button[data-filter]").forEach(button => {
+        const isActive = button.dataset.filter === activeFilter;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+    });
+    updateFilterIndicator();
+    render();
+});
+
+backToFoldersButton.addEventListener("click", () => {
+    const previousFolderTag = openFolderTag;
+    openFolderTag = null;
+    activeFilter = "all";
+    filterList.querySelectorAll("button[data-filter]").forEach(button => {
+        const isActive = button.dataset.filter === activeFilter;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+    });
+    updateFilterIndicator();
+    render();
+    [...gallery.querySelectorAll(".design-folder-button")]
+        .find(button => button.dataset.folderTag === previousFolderTag)
+        ?.focus();
+});
+
 window.addEventListener("resize", updateFilterIndicator);
 document.getElementById("btn-search")?.addEventListener("click", () => { query = searchInput.value; render(); });
 searchInput.addEventListener("keydown", e => { if (e.key === "Enter") { query = searchInput.value; render(); } });
 searchInput.addEventListener("input", () => { query = searchInput.value; render(); });
 
 gallery.addEventListener("click", e => {
+    const folderButton = e.target.closest(".design-folder-button");
+    if (folderButton) {
+        openFolderTag = folderButton.dataset.folderTag;
+        activeFilter = openFolderTag;
+        filterList.querySelectorAll("button[data-filter]").forEach(button => {
+            const isActive = button.dataset.filter === activeFilter;
+            button.classList.toggle("active", isActive);
+            button.setAttribute("aria-pressed", String(isActive));
+        });
+        updateFilterIndicator();
+        render();
+        backToFoldersButton.focus();
+        return;
+    }
+
     const previewButton = e.target.closest(".card-preview");
     if (previewButton) {
         const card = previewButton.closest(".card");
