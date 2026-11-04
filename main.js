@@ -208,6 +208,34 @@ const previewNext = document.getElementById("preview-next");
 const previewClose = document.getElementById("preview-close");
 
 const groupedViewStorageKey = "publicityGroupedViewEnabled";
+const themeStorageKey = "publicityTheme";
+const themeOptions = document.querySelectorAll("[data-theme-option]");
+
+function loadThemePreference() {
+    try {
+        const theme = window.localStorage.getItem(themeStorageKey);
+        return ["light", "dark", "system"].includes(theme) ? theme : "light";
+    } catch (error) {
+        console.warn("No se pudo leer la preferencia de tema.", error);
+        return "light";
+    }
+}
+
+function saveThemePreference(theme) {
+    try {
+        window.localStorage.setItem(themeStorageKey, theme);
+    } catch (error) {
+        console.warn("No se pudo guardar la preferencia de tema.", error);
+    }
+}
+
+function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    themeOptions.forEach(option => {
+        const isSelected = option.dataset.themeOption === theme;
+        option.setAttribute("aria-checked", String(isSelected));
+    });
+}
 
 function loadGroupedViewPreference() {
     try {
@@ -234,6 +262,7 @@ let currentPreviewIndex = -1;
 let previewOpener = null;
 let groupedViewEnabled = loadGroupedViewPreference();
 let openFolderTag = null;
+let currentTheme = loadThemePreference();
 
 const categoryFolderTitles = {
     pendon: "Pendones",
@@ -268,6 +297,26 @@ function updateFilterIndicator() {
 function formatFileSize(bytes) {
     if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(1)} KB`;
     return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+function updateImageLoadingState(image) {
+    const container = image.closest(".card-media, .design-folder-collage, .preview-image-wrap");
+    if (!container) return;
+
+    const images = [...container.querySelectorAll("img")];
+    const isLoading = images.some(item => !item.complete);
+    const hasError = images.some(item => item.complete && !item.naturalWidth);
+    container.classList.toggle("is-loading", isLoading);
+    container.classList.toggle("has-image-error", hasError);
+    image.classList.toggle("is-loading", !image.complete);
+}
+
+function initializeGalleryImages() {
+    gallery.querySelectorAll("img").forEach(image => {
+        image.addEventListener("load", () => updateImageLoadingState(image));
+        image.addEventListener("error", () => updateImageLoadingState(image));
+        updateImageLoadingState(image);
+    });
 }
 
 function hidePreviewLens() {
@@ -324,8 +373,12 @@ function updatePreview(animate = false) {
     [previewImage, previewDetails].forEach(element => {
         element.classList.remove("preview-enter");
     });
+    previewImage.classList.add("is-loading");
+    previewImageWrap.classList.add("is-loading");
+    previewImageWrap.classList.remove("has-image-error");
     previewImage.src = design.preview;
     previewImage.alt = design.title;
+    updateImageLoadingState(previewImage);
     if (animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         [previewImage, previewDetails].forEach(element => {
             void element.offsetWidth;
@@ -389,7 +442,7 @@ function createDesignFolderCard(tag, folderDesigns) {
     button.setAttribute("aria-label", `Abrir carpeta de ${title}, ${folderDesigns.length} diseños`);
 
     const previews = folderDesigns.slice(0, 4)
-        .map(design => `<img src="${design.preview}" alt="">`)
+        .map(design => `<img class="is-loading" src="${design.preview}" alt="" loading="lazy" decoding="async">`)
         .join("");
     button.innerHTML = `
         <span class="design-folder-collage" aria-hidden="true">${previews}</span>
@@ -452,7 +505,7 @@ function render() {
         card.innerHTML = `
             <div class="card-media">
                 <button type="button" class="card-preview" aria-label="Ver detalles de ${d.title}">
-                    <img src="${d.preview}" alt="">
+                    <img class="is-loading" src="${d.preview}" alt="" loading="lazy" decoding="async">
                 </button>
             </div>
             <div class="card-body">
@@ -466,6 +519,7 @@ function render() {
             </div>`;
         gallery.appendChild(card);
     });
+    initializeGalleryImages();
     window.MillerIcons?.scan(gallery);
     if (previewDialog.open && currentPreviewIndex >= 0) updatePreview();
 }
@@ -555,6 +609,8 @@ previewPrev.addEventListener("click", () => movePreview(-1));
 previewNext.addEventListener("click", () => movePreview(1));
 previewClose.addEventListener("click", closePreview);
 previewDownload.addEventListener("click", () => closePreview());
+previewImage.addEventListener("load", () => updateImageLoadingState(previewImage));
+previewImage.addEventListener("error", () => updateImageLoadingState(previewImage));
 previewImageWrap.addEventListener("pointermove", updatePreviewLens);
 previewImageWrap.addEventListener("pointerleave", hidePreviewLens);
 
@@ -586,6 +642,16 @@ downloadMenuToggle.addEventListener("click", () => {
     downloadMenuToggle.setAttribute("aria-expanded", String(!isOpen));
     downloadMenuList.hidden = isOpen;
     if (!isOpen) downloadMenuList.querySelector('[role="menuitem"]').focus();
+});
+
+themeOptions.forEach(option => {
+    option.addEventListener("click", () => {
+        currentTheme = option.dataset.themeOption;
+        applyTheme(currentTheme);
+        saveThemePreference(currentTheme);
+        closeDownloadMenu();
+        downloadMenuToggle.focus();
+    });
 });
 
 document.addEventListener("click", e => {
@@ -638,3 +704,4 @@ document.getElementById("share-page").addEventListener("click", async () => {
 
 render();
 updateFilterIndicator();
+applyTheme(currentTheme);
